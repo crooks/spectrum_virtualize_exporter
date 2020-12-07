@@ -313,6 +313,9 @@ func TestIOgrpsDetail(t *testing.T) {
 		t.Errorf("probeIOgrpsDetail() returned non-success")
 	}
 	em := `
+    # HELP spectrum_iogrp_maintenance Is the I/O group in maintenance mode
+    # TYPE spectrum_iogrp_maintenance gauge
+    spectrum_iogrp_maintenance{id="0",name="io_grp0"} 1
     # HELP spectrum_iogrp_mem_flash_free Unused memory allocated to FlashCopy
     # TYPE spectrum_iogrp_mem_flash_free gauge
     spectrum_iogrp_mem_flash_free{id="0",name="io_grp0"} 1.81193932e+08

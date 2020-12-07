@@ -30,6 +30,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func strBool64(s string) (bool64 float64) {
+	sLower := strings.ToLower(s)
+	if sLower == "y" || sLower == "yes" {
+		bool64 = 1.0
+	}
+	return
+}
+
 func probeNodeStats(c SpectrumHTTP, registry *prometheus.Registry) bool {
 	var (
 		mCmpCPU = prometheus.NewGaugeVec(
@@ -553,12 +561,20 @@ func probeIOgrpsDetail(c SpectrumHTTP, registry *prometheus.Registry, ids []stri
 			},
 			append(labels),
 		)
+		iMaintenance = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "spectrum_iogrp_maintenance",
+				Help: "Is the I/O group in maintenance mode",
+			},
+			append(labels),
+		)
 	)
 
 	registry.MustRegister(iFlashTotal)
 	registry.MustRegister(iFlashFree)
 	registry.MustRegister(iRaidTotal)
 	registry.MustRegister(iRaidFree)
+	registry.MustRegister(iMaintenance)
 
 	type ioGrp struct {
 		ID                 string
@@ -625,6 +641,8 @@ func probeIOgrpsDetail(c SpectrumHTTP, registry *prometheus.Registry, ids []stri
 		} else {
 			iRaidFree.WithLabelValues(s.ID, s.Name).Set(float64(rfree))
 		}
+		// Maintenance Mode
+		iMaintenance.WithLabelValues(s.ID, s.Name).Set(strBool64(s.Maintenance))
 	}
 	return true
 }
