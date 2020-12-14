@@ -530,6 +530,53 @@ func probeIPPorts(c SpectrumHTTP, registry *prometheus.Registry) bool {
 	return true
 }
 
+func probeRcConsistGrp(c SpectrumHTTP, registry *prometheus.Registry) bool {
+	type iorcgrp struct {
+		ID         string
+		Name       string
+		MasterID   string `json:"master_cluster_id"`
+		MasterName string `json:"master_cluster_name"`
+		AuxID      string `json:"aux_cluster_id"`
+		AuxName    string `json:"aux_cluster_name"`
+		Primary    string `json:"primary"`
+		State      string
+		RelCount   string `json:"relationship_count"`
+		CopyType   string `json:"copy_type"`
+		CycleMode  string `json:"cycling_mode"`
+		FreezeTime string `json:"freeze_time"`
+	}
+	labels := []string{"name"}
+	var (
+		mState = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "spectrum_rc_consistency_state",
+				Help: "Remote Copy consistency status",
+			},
+			append(labels, "master", "aux"),
+		)
+	)
+
+	registry.MustRegister(mState)
+
+	var st []iorcgrp
+	if err := c.Get("rest/lsrcconsistgrp", "", &st); err != nil {
+		log.Printf("Error: %v", err)
+		return false
+	}
+
+	for _, s := range st {
+		var state float64
+		// Leaving scope to explicitly return states (1-9)
+		if s.State == "consistent_synchronized" {
+			state = 10.0
+		} else {
+			state = 0.0
+		}
+		mState.WithLabelValues(s.Name, s.MasterName, s.AuxName).Set(state)
+	}
+	return true
+}
+
 func probeIOgrpsDetail(c SpectrumHTTP, registry *prometheus.Registry, ids []string) bool {
 	labels := []string{"id", "name"}
 	var (
@@ -714,6 +761,7 @@ func probe(ctx context.Context, target string, registry *prometheus.Registry, hc
 		probeHost(c, registry) &&
 		probeFCPorts(c, registry) &&
 		probeIPPorts(c, registry) &&
+		probeRcConsistGrp(c, registry) &&
 		probeIOgrpsDetail(c, registry, ioGrpIds)
 
 	return success, nil
