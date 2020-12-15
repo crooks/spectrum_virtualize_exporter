@@ -594,6 +594,13 @@ func probeIOgrpsDetail(c SpectrumHTTP, registry *prometheus.Registry, ids []stri
 			},
 			append(labels),
 		)
+		iFlashMax = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "spectrum_iogrp_mem_flash_max",
+				Help: "Maximum memory that can be allocated to FlashCopy",
+			},
+			append(labels),
+		)
 		iRaidTotal = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "spectrum_iogrp_mem_raid_total",
@@ -619,6 +626,7 @@ func probeIOgrpsDetail(c SpectrumHTTP, registry *prometheus.Registry, ids []stri
 
 	registry.MustRegister(iFlashTotal)
 	registry.MustRegister(iFlashFree)
+	registry.MustRegister(iFlashMax)
 	registry.MustRegister(iRaidTotal)
 	registry.MustRegister(iRaidFree)
 	registry.MustRegister(iMaintenance)
@@ -675,6 +683,12 @@ func probeIOgrpsDetail(c SpectrumHTTP, registry *prometheus.Registry, ids []stri
 			log.Printf("Failed to parse %q: %v", s.FlashCopyFreeMem, err)
 		} else {
 			iFlashFree.WithLabelValues(s.ID, s.Name).Set(float64(ffree))
+		}
+		fmax, err := units.ParseBase2Bytes(s.FlashCopyMaxMem)
+		if err != nil {
+			log.Printf("Failed to parse %q: %v", s.FlashCopyMaxMem, err)
+		} else {
+			iFlashMax.WithLabelValues(s.ID, s.Name).Set(float64(fmax))
 		}
 		rtot, err := units.ParseBase2Bytes(s.RaidTotalMem)
 		if err != nil {
